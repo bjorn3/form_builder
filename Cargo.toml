@@ -1,0 +1,2 @@
+[workspace]
+members = ["form_builder", "form_builder_derive", "example"]

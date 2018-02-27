@@ -1,0 +1,9 @@
+[package]
+name = "example"
+version = "0.1.0"
+authors = ["bjorn3 <bjorn3@users.noreply.github.com>"]
+
+[dependencies]
+form_builder = { path = "../form_builder" }
+form_builder_derive = { path = "../form_builder_derive" }
+pretty_assertions = "0.5.0"

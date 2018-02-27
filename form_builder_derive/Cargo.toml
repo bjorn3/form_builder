@@ -1,0 +1,11 @@
+[package]
+name = "form_builder_derive"
+version = "0.1.0"
+authors = ["bjorn3 <bjorn3@users.noreply.github.com>"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = "0.12.13"
+quote = "0.4.2"
