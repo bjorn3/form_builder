@@ -23,8 +23,8 @@ pub fn derive_form(input: TokenStream) -> TokenStream {
         Fields::Unit => panic!("Can't derive Form for unit struct"),
     };
     let mut render_fields_html = Vec::new();
-    let mut render_fields_gtk = Vec::new();
     let mut from_gtk_dialog = Vec::new();
+    let mut build_form_fields = Vec::new();
     for (i, field) in fields_named.named.iter().enumerate() {
         let field_name = field.ident.unwrap();
         let mut field_label = field_name.as_ref().to_string();
@@ -33,11 +33,11 @@ pub fn derive_form(input: TokenStream) -> TokenStream {
         render_fields_html.push(quote! {
             self.#field_name.render_field_html(&mut buf, stringify!(#field_name), #field_label);
         });
-        render_fields_gtk.push(quote! {
-            self.#field_name.render_field_gtk(submit_button.clone(), #field_label)
-        });
         from_gtk_dialog.push(quote! {
             #field_name: FormField::from_gtk_widget(fields[#i].clone())
+        });
+        build_form_fields.push(quote! {
+            form_builder.add_field(&self.#field_name, #field_label);
         });
     }
     let expanded = quote! {
@@ -46,7 +46,7 @@ pub fn derive_form(input: TokenStream) -> TokenStream {
             extern crate form_builder;
             use self::gtk::prelude::*;
             use self::gtk::{Object, Window, Dialog, DialogFlags, Button, Label};
-            use self::form_builder::{Form, FormField};
+            use self::form_builder::{GtkFormBuilder, Form, FormField};
 
             impl Form for #name {
                 fn render_html(&self, action: &str) -> String {
@@ -71,13 +71,10 @@ pub fn derive_form(input: TokenStream) -> TokenStream {
                     let submit_button: Button = dialog.get_widget_for_response(0).unwrap().downcast().unwrap();
                     submit_button.set_size_request(200, 0);
 
-                    let mut fields = Vec::new();
-                    let content = dialog.get_content_area();
-                    #(
-                        let field = #render_fields_gtk;
-                        fields.push(field.1);
-                        content.add(&field.0);
-                    )*
+                    let mut form_builder = GtkFormBuilder::new(submit_button);
+                    #(#build_form_fields)*
+                    let (box_, fields) = form_builder.build();
+                    dialog.get_content_area().add(&box_);
 
                     dialog.show_all();
                     (dialog, fields)
