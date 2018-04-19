@@ -6,7 +6,7 @@ extern crate syn;
 extern crate quote;
 
 use proc_macro::TokenStream;
-use syn::{DeriveInput, Data, Fields};
+use syn::{DeriveInput, Data, Fields, Ident};
 
 #[proc_macro_derive(Form)]
 pub fn derive_form(input: TokenStream) -> TokenStream {
@@ -31,56 +31,50 @@ pub fn derive_form(input: TokenStream) -> TokenStream {
         field_label[0..1].make_ascii_uppercase();
         field_label.push_str(": ");
         render_fields_html.push(quote! {
-            self.#field_name.render_field_html(&mut buf, stringify!(#field_name), #field_label);
+            let field_name = &format!("{}__{}", name, stringify!(#field_name));
+            writeln!(buf, "<label for=\"{n}\">{l}</label>", n=&field_name, l=#field_label).unwrap();
+            self.#field_name.render_html_inner(buf, &field_name);
         });
         from_gtk_dialog.push(quote! {
-            #field_name: FormField::from_gtk_widget(fields[#i].clone())
+            #field_name: Form::from_gtk_widget(fields[#i].take().unwrap())
         });
         build_form_fields.push(quote! {
             form_builder.add_field(&self.#field_name, #field_label);
         });
     }
+    let some_random_wrapper_mod = Ident::from(format!("some_random_wrapper_mod_for_{}", name));
     let expanded = quote! {
-        mod _form_builder_impl {
+        #[allow(non_snake_case)]
+        mod #some_random_wrapper_mod {
             extern crate gtk;
             extern crate form_builder;
+            use std::any::Any;
+            use std::io::{Write, Cursor};
             use self::gtk::prelude::*;
-            use self::gtk::{Object, Window, Dialog, DialogFlags, Button, Label};
-            use self::form_builder::{GtkFormBuilder, Form, FormField};
+            use self::gtk::{Object, Window, Dialog, DialogFlags, Widget, Button, Label};
+            use self::form_builder::*;
 
             impl Form for #name {
-                fn render_html(&self, action: &str) -> String {
-                    use std::io::Write;
-                    let mut buf = ::std::io::Cursor::new(Vec::new());
-                    writeln!(buf, "<form action=\"{}\">", action).unwrap();
-
+                fn render_html_inner(&self, buf: &mut Cursor<Vec<u8>>, name: &str) {
+                    if !name.is_empty() {
+                        writeln!(buf, "<div class=\"{}\">", name).unwrap();
+                    }
                     #(#render_fields_html);*
-
-                    writeln!(buf, "<button type=\"submit\">Submit</button>\n</form>").unwrap();
-
-                    String::from_utf8(buf.into_inner()).unwrap()
+                    if !name.is_empty() {
+                        writeln!(buf, "</div>").unwrap();
+                    }
                 }
 
-                fn render_gtk(&self) -> (Dialog, Vec<Object>) {
-                    let dialog = Dialog::new_with_buttons::<Window>(
-                        Some("form"),
-                        None,
-                        DialogFlags::empty(),
-                        &[("Submit", 0)]
-                    );
-                    let submit_button: Button = dialog.get_widget_for_response(0).unwrap().downcast().unwrap();
-                    submit_button.set_size_request(200, 0);
-
+                fn render_gtk_inner(&self, submit_button: Button, _validity_label: Option<Label>) -> (Widget, Box<Any>) {
                     let mut form_builder = GtkFormBuilder::new(submit_button);
                     #(#build_form_fields)*
                     let (box_, fields) = form_builder.build();
-                    dialog.get_content_area().add(&box_);
-
-                    dialog.show_all();
-                    (dialog, fields)
+                    (box_.upcast(), Box::new(fields))
                 }
 
-                fn from_gtk_dialog(fields: Vec<Object>) -> Self {
+                fn from_gtk_widget(fields: Box<Any>) -> Self {
+                    let fields = fields.downcast::<Vec<Box<Any>>>().unwrap();
+                    let mut fields = fields.into_iter().map(Option::Some).collect::<Vec<_>>();
                     #name {
                         #(#from_gtk_dialog),*
                     }
