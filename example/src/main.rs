@@ -19,6 +19,13 @@ struct FormWrapper {
     login_form_2: LoginForm,
 }
 
+#[derive(Debug, Form)]
+enum Color {
+    Red,
+    Green,
+    Blue,
+}
+
 fn main() {
     gtk::init().unwrap();
     let login_form = LoginForm {
@@ -58,5 +65,18 @@ fn main() {
 </form>
 ");
 
-    println!("{:#?}", form_wrapper.show_gtk());
+    let color_form = Color::Green;
+    let color_form_html = color_form.render_html("/login");
+    assert_eq!(&*color_form_html, "\
+<form action=\"/login\">
+<select name=\"\">
+<option value=\"__Red\">Red</option>
+<option value=\"__Green\" selected=\"selected\">Green</option>
+<option value=\"__Blue\">Blue</option>
+</select><br>
+<button type=\"submit\">Submit</button>
+</form>
+");
+
+    println!("{:#?}", color_form.show_gtk());
 }
