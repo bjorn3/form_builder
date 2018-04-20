@@ -3,7 +3,7 @@ extern crate gtk;
 use std::any::Any;
 use std::io::{self, Write};
 use gtk::prelude::*;
-use gtk::{Object, Window, Dialog, DialogFlags, Widget, Label, Entry, Button, Orientation};
+use gtk::{Object, Window, Dialog, DialogFlags, Widget, Label, Entry, Switch, Button, Orientation};
 use gtk::Box as GtkBox;
 
 pub struct GtkFormBuilder(Button, GtkBox, Vec<Box<Any>>);
@@ -71,6 +71,24 @@ pub trait Form {
     }
     fn render_gtk_inner(&self, submit_button: Button, validity_label: Option<Label>) -> (Widget, Box<Any>);
     fn from_gtk_widget(fields: Box<Any>) -> Self;
+}
+
+impl Form for bool {
+    fn render_html_inner(&self, buf: &mut io::Cursor<Vec<u8>>, name: &str) {
+        let checked = if *self { " checked" } else { "" };
+        writeln!(buf, "<input name=\"{n}\" type=\"text\"{checked}><br>", n=name, checked=checked).unwrap();
+    }
+
+    fn render_gtk_inner(&self, _submit_button: Button, _validity_label: Option<Label>) -> (Widget, Box<Any>) {
+        let switch = Switch::new();
+        switch.set_active(*self);
+        (switch.clone().upcast(), Box::new(switch))
+    }
+
+    fn from_gtk_widget(object: Box<Any>) -> Self {
+        let text_entry: Switch = *object.downcast().unwrap();
+        text_entry.get_active()
+    }
 }
 
 impl Form for String {

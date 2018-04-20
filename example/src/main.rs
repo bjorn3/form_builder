@@ -11,6 +11,7 @@ use form_builder::{Form, NonEmptyString, Password};
 struct LoginForm {
     username: NonEmptyString,
     password: Password,
+    remember_username: bool,
 }
 
 #[derive(Debug, Default, Form)]
@@ -31,6 +32,7 @@ fn main() {
     let login_form = LoginForm {
         username: NonEmptyString("My u\"sername".to_string()),
         password: Password("the_passw0rd".to_string()),
+        remember_username: true,
     };
     let login_form_html = login_form.render_html("/login");
     assert_eq!(&*login_form_html, "\
@@ -39,6 +41,8 @@ fn main() {
 <input name=\"__username\" type=\"text\" required value=\"My u\\\"sername\"><br>
 <label for=\"__password\">Password: </label>
 <input name=\"__password\" type=\"password\" required><br>
+<label for=\"__remember_username\">Remember_username: </label>
+<input name=\"__remember_username\" type=\"text\" checked><br>
 <button type=\"submit\">Submit</button>
 </form>
 ");
@@ -53,6 +57,8 @@ fn main() {
 <input name=\"__login_form_1__username\" type=\"text\" required value=\"\"><br>
 <label for=\"__login_form_1__password\">Password: </label>
 <input name=\"__login_form_1__password\" type=\"password\" required><br>
+<label for=\"__login_form_1__remember_username\">Remember_username: </label>
+<input name=\"__login_form_1__remember_username\" type=\"text\"><br>
 </div>
 <label for=\"__login_form_2\">Login_form_2: </label>
 <div class=\"__login_form_2\">
@@ -60,6 +66,8 @@ fn main() {
 <input name=\"__login_form_2__username\" type=\"text\" required value=\"\"><br>
 <label for=\"__login_form_2__password\">Password: </label>
 <input name=\"__login_form_2__password\" type=\"password\" required><br>
+<label for=\"__login_form_2__remember_username\">Remember_username: </label>
+<input name=\"__login_form_2__remember_username\" type=\"text\"><br>
 </div>
 <button type=\"submit\">Submit</button>
 </form>
@@ -78,5 +86,5 @@ fn main() {
 </form>
 ");
 
-    println!("{:#?}", color_form.show_gtk());
+    println!("{:#?}", form_wrapper.show_gtk());
 }
